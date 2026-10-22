@@ -2,82 +2,515 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Next B3A</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0b0e13">
+<title>Next B3A · 城巴 B3A 到站時間</title>
 <style>
-  body { font-family: system-ui, "Segoe UI", "Microsoft JhengHei", sans-serif; margin: 0;
-         background: #f4f6f8; color: #1f2933; }
-  header { background: #c00000; color: #fff; padding: 16px 24px; }
-  header h1 { margin: 0; font-size: 28px; }
-  header p { margin: 4px 0 0; opacity: .9; }
-  main { display: flex; flex-wrap: wrap; gap: 20px; padding: 24px; }
-  section { flex: 1 1 320px; background: #fff; border-radius: 12px; padding: 18px 22px;
-            box-shadow: 0 1px 4px rgba(0,0,0,.12); }
-  h2 { margin: 0 0 4px; font-size: 20px; color: #1f4e79; }
-  .stop { color: #6b7280; margin: 0 0 14px; }
-  .bus { display: flex; justify-content: space-between; align-items: baseline;
-         border-top: 1px solid #e5e7eb; padding: 10px 0; }
-  .min { font-size: 34px; font-weight: 700; color: #c00000; }
-  .clock { color: #6b7280; }
-  .none { color: #6b7280; padding: 10px 0; }
-  footer { padding: 0 24px 24px; color: #6b7280; font-size: 14px; }
+  :root {
+    --bg: #0b0e13;
+    --panel: #141a22;
+    --panel-2: #1a212b;
+    --line: #232c38;
+    --fg: #eaf0f6;
+    --muted: #8a97a8;
+    --amber: #ffb020;
+    --red: #c8102e;
+    --green: #2ecc71;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", "Microsoft JhengHei", sans-serif;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* ---------- header ---------- */
+  .top {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding: 14px 18px 12px;
+    background: rgba(11, 14, 19, 0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .row1 { display: flex; align-items: center; gap: 12px; }
+
+  .route {
+    flex: none;
+    background: var(--red);
+    color: #fff;
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding: 5px 11px;
+    border-radius: 9px;
+    line-height: 1.1;
+  }
+
+  h1 {
+    flex: 1;
+    margin: 0;
+    font-size: 17px;
+    font-weight: 650;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pill {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px 9px;
+  }
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+
+  .pill.stale { color: var(--amber); border-color: #4a3a12; }
+  .pill.stale .dot { background: var(--amber); animation: none; }
+
+  .sub {
+    margin: 7px 0 0;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* ---------- boards ---------- */
+  main {
+    display: grid;
+    align-items: start;
+    gap: 14px;
+    padding: 14px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  @media (min-width: 780px) {
+    main { grid-template-columns: 1fr 1fr; gap: 18px; padding: 20px; }
+  }
+
+  .board {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 15px 17px 6px;
+  }
+
+  .dest {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .dest h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+  }
+
+  .zh { font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+  .from {
+    margin: 3px 0 6px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    column-gap: 12px;
+    padding: 11px 0 12px;
+    border-top: 1px solid var(--line);
+  }
+
+  .min {
+    font-size: 46px;
+    font-weight: 750;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .min small {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0;
+    margin-left: 5px;
+    color: var(--muted);
+  }
+
+  .min.due { color: var(--amber); }
+
+  .clock {
+    font-size: 14px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rmk {
+    grid-column: 1 / -1;
+    margin-top: 5px;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+
+  .empty, .error {
+    padding: 24px 0 26px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
+  }
+
+  .error strong { display: block; color: var(--fg); font-weight: 600; margin-bottom: 3px; }
+
+  .retry {
+    margin-top: 10px;
+    background: var(--panel-2);
+    color: var(--fg);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 8px 14px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .retry:active { background: #222b38; }
+
+  /* loading skeleton */
+  .sk {
+    height: 40px;
+    margin: 11px 0 12px;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--panel-2), #26303e, var(--panel-2));
+    background-size: 220% 100%;
+    animation: shimmer 1.3s linear infinite;
+    border-top: 1px solid var(--line);
+  }
+
+  .sk:first-child { border-top: 0; }
+
+  /* ---------- footer ---------- */
+  footer {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 6px 17px 26px;
+    color: var(--muted);
+    font-size: 11.5px;
+    line-height: 1.6;
+  }
+
+  .meta { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+
+  .bar {
+    height: 2px;
+    margin-top: 10px;
+    background: var(--line);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .bar i {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--muted);
+    transition: width 1s linear;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.55); }
+    60% { box-shadow: 0 0 0 5px rgba(46, 204, 113, 0); }
+  }
+
+  @keyframes shimmer {
+    from { background-position: 120% 0; }
+    to { background-position: -120% 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dot, .sk { animation: none; }
+    .bar i { transition: none; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>Next B3A</h1>
-  <p>Citybus · Lingnan ⇄ Shenzhen Bay Port · 城巴 B3A</p>
+
+<header class="top">
+  <div class="row1">
+    <span class="route">B3A</span>
+    <h1>Next B3A</h1>
+    <span class="pill" id="pill">
+      <span class="dot"></span><span id="pillText">LIVE</span>
+    </span>
+  </div>
+  <p class="sub">Citybus · Lingnan ⇄ Shenzhen Bay Port · <span lang="zh-Hant">城巴 B3A</span></p>
 </header>
+
 <main>
-  <section>
-    <h2>To Shenzhen Bay Port · 往深圳灣口岸</h2>
-    <p class="stop">From Fu Tai Estate, Castle Peak Road · 富泰邨</p>
-    <div id="out">Loading…</div>
+  <section class="board">
+    <div class="dest">
+      <h2>To Shenzhen Bay Port</h2>
+      <span class="zh" lang="zh-Hant">往深圳灣口岸</span>
+    </div>
+    <p class="from">From Fu Tai Estate, Castle Peak Road · 富泰邨</p>
+    <div id="rows-out"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>
   </section>
-  <section>
-    <h2>To Tuen Mun · 往屯門山景邨</h2>
-    <p class="stop">From Shenzhen Bay Port · 深圳灣口岸</p>
-    <div id="in">Loading…</div>
+
+  <section class="board">
+    <div class="dest">
+      <h2>To Tuen Mun</h2>
+      <span class="zh" lang="zh-Hant">往屯門山景邨</span>
+    </div>
+    <p class="from">From Shenzhen Bay Port · 深圳灣口岸</p>
+    <div id="rows-in"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>
   </section>
 </main>
-<footer>Data: Citybus real-time ETA, DATA.GOV.HK · updated <span id="updated">–</span> · refreshes every 30 s</footer>
-<script>
-  // Stop IDs come from /route-stop/CTB/B3A/outbound and /stop/{id}:
-  // 003261 = Fu Tai Estate (outbound, last stop before the port)
-  // 003208 = Shenzhen Bay Port (inbound, first stop)
-  const API = "https://rt.data.gov.hk/v2/transport/citybus/eta/CTB/";
-  const BOARDS = [["out", "003261", "O"], ["in", "003208", "I"]];
 
-  async function load(boxId, stop, dir) {
-    const box = document.getElementById(boxId);
-    try {
-      const res = await fetch(API + stop + "/B3A");
-      const data = (await res.json()).data.filter(b => b.dir === dir && b.eta);
-      if (data.length === 0) {
-        box.innerHTML = '<div class="none">No bus in the next hour · 暫時沒有班次</div>';
-        return;
+<footer>
+  <div class="meta">
+    <span>Data: Citybus real-time ETA, DATA.GOV.HK</span>
+    <span>Updated <span id="updated">—</span></span>
+    <span id="count">starting…</span>
+  </div>
+  <div class="bar"><i id="bar"></i></div>
+</footer>
+
+<script>
+  "use strict";
+
+  const API = "https://rt.data.gov.hk/v2/transport/citybus/eta/CTB/";
+  const REFRESH_MS = 30000;
+  const MAX_ROWS = 3;
+
+  // Stop IDs from /route-stop/CTB/B3A/outbound and /stop/{id}
+  const BOARDS = [
+    { id: "out", stop: "003261", dir: "O" },  // Fu Tai Estate, outbound
+    { id: "in",  stop: "003208", dir: "I" }   // Shenzhen Bay Port, inbound
+  ];
+
+  const boxes = {
+    out: document.getElementById("rows-out"),
+    in:  document.getElementById("rows-in")
+  };
+
+  const pill = document.getElementById("pill");
+  const pillText = document.getElementById("pillText");
+  const updatedEl = document.getElementById("updated");
+  const countEl = document.getElementById("count");
+  const barEl = document.getElementById("bar");
+
+  let nextRefresh = Date.now() + REFRESH_MS;
+  let lastOk = 0;
+
+  /* ---------- rendering ---------- */
+
+  function clearBox(box) {
+    box.textContent = "";
+  }
+
+  function showMessage(box, title, detail, retry) {
+    clearBox(box);
+    const el = document.createElement("div");
+    el.className = "error";
+    if (title) {
+      const strong = document.createElement("strong");
+      strong.textContent = title;
+      el.appendChild(strong);
+    }
+    el.appendChild(document.createTextNode(detail));
+    if (retry) {
+      const btn = document.createElement("button");
+      btn.className = "retry";
+      btn.type = "button";
+      btn.textContent = "Try again";
+      btn.addEventListener("click", refresh);
+      el.appendChild(btn);
+    }
+    box.appendChild(el);
+  }
+
+  function clockText(ms) {
+    return new Date(ms).toLocaleTimeString("en-GB", {
+      hour: "2-digit", minute: "2-digit", timeZone: "Asia/Hong_Kong"
+    });
+  }
+
+  function setMinutes(el, etaMs, now) {
+    const diff = etaMs - now;
+    if (diff <= 60000) {
+      el.textContent = "Due";
+      el.classList.add("due");
+      return;
+    }
+    const mins = Math.round(diff / 60000);
+    el.textContent = String(mins);
+    el.appendChild(document.createTextNode(" "));
+    const unit = document.createElement("small");
+    unit.textContent = "min";
+    el.appendChild(unit);
+    el.classList.remove("due");
+  }
+
+  function renderRows(id, arrivals) {
+    const box = boxes[id];
+    clearBox(box);
+
+    if (arrivals.length === 0) {
+      showMessage(box, "", "No bus in the next hour · 暫時沒有班次", false);
+      return;
+    }
+
+    const now = Date.now();
+    for (const bus of arrivals.slice(0, MAX_ROWS)) {
+      const row = document.createElement("div");
+      row.className = "row";
+
+      const min = document.createElement("div");
+      min.className = "min";
+      min.dataset.eta = String(bus.etaMs);
+      setMinutes(min, bus.etaMs, now);
+
+      const clock = document.createElement("div");
+      clock.className = "clock";
+      clock.textContent = clockText(bus.etaMs);
+
+      row.appendChild(min);
+      row.appendChild(clock);
+
+      // remark text comes from the API: insert as text, never as HTML
+      if (bus.rmk) {
+        const rmk = document.createElement("div");
+        rmk.className = "rmk";
+        rmk.textContent = bus.rmk;
+        row.appendChild(rmk);
       }
-      box.innerHTML = data.map(b => {
-        const t = new Date(b.eta);
-        const min = Math.max(0, Math.round((t - Date.now()) / 60000));
-        const clock = t.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit",
-                                                      timeZone: "Asia/Hong_Kong" });
-        const note = b.rmk_en ? " · " + b.rmk_en : "";
-        return `<div class="bus"><span class="min">${min === 0 ? "Arriving" : min + " min"}</span>` +
-               `<span class="clock">${clock}${note}</span></div>`;
-      }).join("");
-    } catch (e) {
-      box.innerHTML = '<div class="none">Cannot reach the data. Check the Wi-Fi.</div>';
+
+      box.appendChild(row);
     }
   }
 
-  function refresh() {
-    BOARDS.forEach(b => load(...b));
-    document.getElementById("updated").textContent =
-      new Date().toLocaleTimeString("en-GB", { timeZone: "Asia/Hong_Kong" });
+  /* ---------- per-second tick ---------- */
+
+  function tick() {
+    const now = Date.now();
+
+    document.querySelectorAll(".min[data-eta]").forEach(function (el) {
+      setMinutes(el, Number(el.dataset.eta), now);
+    });
+
+    const left = Math.max(0, nextRefresh - now);
+    countEl.textContent = "next update in " + Math.ceil(left / 1000) + " s";
+    barEl.style.width = (100 - (left / REFRESH_MS) * 100).toFixed(1) + "%";
+
+    const fresh = lastOk && now - lastOk < REFRESH_MS * 2.2;
+    pill.classList.toggle("stale", !fresh);
+    pillText.textContent = lastOk ? (fresh ? "LIVE" : "STALE") : "LIVE";
   }
+
+  /* ---------- data ---------- */
+
+  async function loadBoard(board) {
+    const res = await fetch(API + board.stop + "/B3A", { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+
+    const payload = await res.json();
+    const list = Array.isArray(payload.data) ? payload.data : [];
+
+    return list
+      .filter(function (b) { return b.dir === board.dir && b.eta; })
+      .map(function (b) {
+        return {
+          etaMs: Date.parse(b.eta),
+          rmk: b.rmk_en || b.rmk_tc || ""
+        };
+      })
+      .filter(function (b) { return Number.isFinite(b.etaMs); })
+      .sort(function (a, b) { return a.etaMs - b.etaMs; });
+  }
+
+  async function refresh() {
+    nextRefresh = Date.now() + REFRESH_MS;
+    const started = Date.now();
+
+    const results = await Promise.allSettled(BOARDS.map(loadBoard));
+
+    results.forEach(function (result, i) {
+      const board = BOARDS[i];
+      const box = boxes[board.id];
+      const alreadyShowing = box.querySelector(".row");
+
+      if (result.status === "fulfilled") {
+        renderRows(board.id, result.value);
+      } else if (alreadyShowing) {
+        // keep the last good times on screen; the pill shows STALE
+        return;
+      } else {
+        showMessage(
+          box,
+          "Cannot reach the data",
+          "Check the Wi-Fi and try again · 無法連接資料",
+          true
+        );
+      }
+    });
+
+    if (results.some(function (r) { return r.status === "fulfilled"; })) {
+      lastOk = started;
+      updatedEl.textContent = new Date().toLocaleTimeString("en-GB", {
+        timeZone: "Asia/Hong_Kong", hour12: false
+      });
+    } else {
+      updatedEl.textContent = "not available";
+    }
+
+    tick();
+  }
+
+  /* ---------- start ---------- */
+
+  tick();
   refresh();
-  setInterval(refresh, 30000);
+
+  setInterval(tick, 1000);
+  setInterval(refresh, REFRESH_MS);
+
+  // phones: pause nothing, but catch up instantly when the tab comes back
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) refresh();
+  });
 </script>
 </body>
 </html>
